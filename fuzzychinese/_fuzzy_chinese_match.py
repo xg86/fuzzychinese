@@ -4,8 +4,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 import pandas as pd
 import logging
+import datetime
 default_logger = logging.getLogger(__name__)
-
 
 class FuzzyChineseMatch(object):
     """The main class for the fuzzy match
@@ -124,6 +124,7 @@ class FuzzyChineseMatch(object):
             Create sparse feature matrix, and vocabulary.
         """
         analyzer = self._build_analyzer()
+        print("Vectorizing dictionary documents", datetime.datetime.now())
         default_logger.debug('Vectorizing dictionary documents ...')
         self._vectorizer = TfidfVectorizer(
             min_df=1, analyzer=analyzer, norm='l2')
@@ -136,6 +137,7 @@ class FuzzyChineseMatch(object):
         """ Vectorize documents need to be matched.
             Create sparse feature matrix, and vocabulary.
         """
+        print("Vectorizing documents to be matched ", datetime.datetime.now())
         default_logger.debug('Vectorizing documents to be matched ...')
         Y = self._vectorizer.transform(raw_documents)
         return Y
@@ -143,6 +145,7 @@ class FuzzyChineseMatch(object):
     def _get_cosine_similarity(self):
         """ Calculate cosine similarity.
         """
+        print("Calculating cosine similarity ", datetime.datetime.now())
         default_logger.debug('Calculating cosine similarity ...')
         if hasattr(self, 'dict_feature_matrix_'):
             self.sim_matrix_ = self.Y_feature_matrix_.dot(
@@ -153,17 +156,20 @@ class FuzzyChineseMatch(object):
     def _get_top_n_similar(self, n):
         """ Find the top n similar words from cosine similarity matrix.
         """
+        print("Finding the top n similar words ", datetime.datetime.now())
         default_logger.debug('Finding the top n similar words ...')
         if hasattr(self, 'sim_matrix_'):
             if ~hasattr(self, 'topn_ind_') or (self.topn_ind_.shape[1] < n):
                 if (self.dict_string_list.shape[0] >= n):
                     self.topn_ind_ = np.argpartition(
                         -self.sim_matrix_, range(n), axis=1)[:, :n]
+                    print("np.argpartition ", datetime.datetime.now())
                 else:
                     dict_len = self.dict_string_list.shape[0]
                     self.topn_ind_ = np.argpartition(
                         -self.sim_matrix_, range(dict_len),
                         axis=1)[:, :dict_len]
+                    print("np.argpartition  + 1 ", datetime.datetime.now())
             if (n <= self.topn_ind_.shape[1]):
                 return self.dict_string_list[self.topn_ind_[:, :n]]
             else:
@@ -183,7 +189,7 @@ class FuzzyChineseMatch(object):
         Returns:
             FuzzyChinese object
         """
-
+        default_logger.debug('fit ...')
         self.dict_string_list = self._validate_data_input(X)
         if isinstance(X, pd.Series) | isinstance(X, pd.DataFrame):
             self._X_index = X.index.to_numpy()
@@ -318,7 +324,6 @@ if __name__ == "__main__":
         pd.DataFrame(top2_similar, columns=['top1', 'top2']),
         pd.DataFrame(
             fcm.get_similarity_score(), columns=['top1_score', 'top2_score']),
-        pd.DataFrame(fcm.get_index(), columns=['top1_index', 'top2_index'])
-    ],
+        pd.DataFrame(fcm.get_index(), columns=['top1_index', 'top2_index'])],
                     axis=1)
     fcm.compare_two_columns(res.town_name, res.top1)
